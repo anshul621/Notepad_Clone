@@ -1,0 +1,237 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'java-library'
+    id 'org.openjfx.javafxplugin' version '0.0.13'
+    id 'org.unbroken-dome.test-sets' version '4.0.0'
+    id 'biz.aQute.bnd.builder' version "5.3.0"
+    id 'maven-publish'
+    id 'signing'
+}
+
+javafx {
+    version = '11'
+    modules = [ 'javafx.controls', 'javafx.fxml']
+    def taskNames = gradle.getStartParameter().getTaskNames()
+    // Prevent pom & module.json from containing JavaFX runtime dependencies
+    if ( taskNames.stream().anyMatch( t -> t.startsWith('pub') ) ) {
+        configuration = 'compileOnly'
+    }
+}
+
+// OSGi bundle is configured through the bnd.bnd file
+
+group = 'org.fxmisc.richtext'
+
+testSets {
+    integrationTest { dirName = 'integrationTest' }
+}
+
+check.dependsOn integrationTest
+integrationTest.mustRunAfter test
+integrationTest.testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+dependencies {
+    api group: 'org.reactfx', name: 'reactfx', version: '2.0-M5'
+    api group: 'org.fxmisc.undo', name: 'undofx', version: '2.1.1'
+    api group: 'org.fxmisc.flowless', name: 'flowless', version: '0.7.1'
+    api group: 'org.fxmisc.wellbehaved', name: 'wellbehavedfx', version: '0.3.3'
+
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+
+    integrationTestImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    integrationTestImplementation group: 'com.nitorcreations', name: 'junit-runners', version: '1.2'
+    integrationTestImplementation "org.testfx:testfx-core:4.0.16-alpha"
+    integrationTestImplementation ("org.testfx:testfx-junit:4.0.15-alpha") {
+        exclude(group: "junit", module: "junit")
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Specification-Title': 'RichTextFX',
+            'Specification-Version': project.specificationVersion,
+            'Implementation-Title': 'RichTextFX',
+            'Implementation-Version': project.version,
+            'Automatic-Module-Name': 'org.fxmisc.richtext')
+    }
+}
+
+javadoc {
+    // ignore missing Javadoc comments or tags
+    options.addBooleanOption('Xdoclint:all,-missing,-accessibility', true)
+
+    // support for JavaFX properties
+    options.addBooleanOption('javafx', true);
+
+    options.links = [
+        // resolve links to Java and JavaFX Javadocs
+        'https://docs.oracle.com/en/java/javase/11/docs/api/',
+        'https://openjfx.io/javadoc/11/',
+
+        // resolve links to ReactFX
+        'https://www.javadoc.io/doc/org.reactfx/reactfx/2.0-M5/',
+
+        // resolve links to FXMisc projects
+        'https://fxmisc.github.io/undo/javadoc/1.3.1/',
+        'https://fxmisc.github.io/flowless/javadoc/0.6/',
+        'https://fxmisc.github.io/wellbehaved/javadoc/0.3/'
+    ]
+}
+
+// use test logging.
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+test {
+    testLogging {
+        // Fancy formatting from http://stackoverflow.com/a/36130467/3634630
+        // set options for log level LIFECYCLE
+        events TestLogEvent.PASSED, TestLogEvent.SKIPPED,
+                TestLogEvent.FAILED, TestLogEvent.STANDARD_OUT
+        showExceptions true
+        exceptionFormat TestExceptionFormat.FULL
+        showCauses true
+        showStackTraces true
+
+        // set options for log level DEBUG and INFO
+        debug {
+            events TestLogEvent.STARTED, TestLogEvent.PASSED,
+                    TestLogEvent.SKIPPED, TestLogEvent.FAILED,
+                    TestLogEvent.STANDARD_OUT, TestLogEvent.STANDARD_ERROR
+        }
+        info.events = debug.events
+        afterSuite { desc, result ->
+            if (!desc.parent) { // will match the outermost suite
+                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+                def startItem = '|  ', endItem = '  |'
+                def repeatLength = startItem.length() + output.length() + endItem.length()
+                println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+            }
+        }
+    }
+}
+
+integrationTest {
+    testLogging {
+        // Fancy formatting from http://stackoverflow.com/a/36130467/3634630
+        // set options for log level LIFECYCLE
+        events TestLogEvent.PASSED, TestLogEvent.SKIPPED,
+                TestLogEvent.FAILED, TestLogEvent.STANDARD_OUT
+        showExceptions true
+        exceptionFormat TestExceptionFormat.FULL
+        showCauses true
+        showStackTraces true
+
+        // set options for log level DEBUG and INFO
+        debug {
+            events TestLogEvent.STARTED, TestLogEvent.PASSED,
+                    TestLogEvent.SKIPPED, TestLogEvent.FAILED,
+                    TestLogEvent.STANDARD_OUT, TestLogEvent.STANDARD_ERROR
+        }
+        info.events = debug.events
+        afterSuite { desc, result ->
+            if (!desc.parent) { // will match the outermost suite
+                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+                def startItem = '|  ', endItem = '  |'
+                def repeatLength = startItem.length() + output.length() + endItem.length()
+                println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+            }
+        }
+    }
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from 'build/docs/javadoc'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+artifacts {
+    archives jar
+    archives javadocJar
+    archives sourcesJar
+}
+
+def doUploadArchives = project.hasProperty('sonatypeUsername') && project.hasProperty('sonatypePassword')
+publish.onlyIf { doUploadArchives }
+
+if(doUploadArchives) {
+    publishing {
+        repositories {
+            maven {
+               def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+               def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+               url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials {
+                    username = "${sonatypeUsername}"
+                    password = "${sonatypePassword}"
+                }
+            }
+        }
+        publications {
+            richTextFX(MavenPublication) {
+                from components.java
+                artifact sourcesJar
+                artifact javadocJar
+                pom {
+                    name = 'RichTextFX'
+                    packaging = 'jar'
+                    description = 'Rich-text area for JavaFX'
+                    url = 'https://github.com/FXMisc/RichTextFX/#richtextfx'
+               
+                    scm {
+                        url = 'scm:git@github.com:FXMisc/RichTextFX.git'
+                        connection = 'scm:git@github.com:FXMisc/RichTextFX.git'
+                        developerConnection = 'scm:git@github.com:FXMisc/RichTextFX.git'
+                    }
+               
+                    licenses {
+                        license {
+                            name = 'The BSD 2-Clause License'
+                            url = 'http://opensource.org/licenses/BSD-2-Clause'
+                            distribution = 'repo'
+                        }
+                        license {
+                            name = 'GPLv2 with the Classpath Exception'
+                            url = 'http://www.gnu.org/software/classpath/license.html'
+                            distribution = 'repo'
+                        }
+                    }
+               
+                    developers {
+                        developer {
+                            name = 'Tomas Mikula'
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    signing {
+        sign publishing.publications.richTextFX
+    }
+}
+
+task fatJar(type: Jar, dependsOn: classes) {
+    archiveAppendix = 'fat'
+    manifest.attributes( 'Automatic-Module-Name': 'org.fxmisc.richtext' )
+    from sourceSets.main.output
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    excludes = [ 'module-info.class',  // block module-info files from other jars
+        '*.dll','javafx*','javafx/',   // block inclusion of javafx files
+        'com/'                         // block com/sun/* files
+    ]
+}
+
+assemble.dependsOn fatJar

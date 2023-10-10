@@ -1,0 +1,233 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.10'
+}
+
+javafx {
+    version = '11'
+    modules = [ 'javafx.controls']
+}
+
+// Common application JVM options - currently required to fix module dependency
+// issues. This sets the required JVM options for all demo tasks specified below.
+application {
+    applicationDefaultJvmArgs = ["--add-opens",   "javafx.graphics/javafx.scene.text=ALL-UNNAMED",
+                                 "--add-exports", "javafx.graphics/com.sun.javafx.text=ALL-UNNAMED",
+                                 "--add-exports", "javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED"] 
+}
+
+dependencies {
+    implementation project(":richtextfx")
+}
+
+jar {
+    manifest {
+        attributes(
+            'Specification-Title': 'RichTextFX Demos',
+            'Specification-Version': project.specificationVersion,
+            'Implementation-Title': 'RichTextFX Demos',
+            'Implementation-Version': project.version)
+    }
+}
+
+task fatJar(type: Jar, dependsOn: classes) {
+    // avoid implicit dependency warning since we use output from the lib projects
+    // See  https://docs.gradle.org/7.0.2/userguide/validation_problems.html#implicit_dependency
+    dependsOn ":richtextfx:jar"
+
+    archiveAppendix = 'fat'
+    excludes = [ 'module-info.class',  // block module-info files from other jars
+        '*.dll','javafx*','javafx/',   // block inclusion of javafx files
+        'com/'                         // block com/sun/* files
+    ]
+
+    manifest {
+        attributes(
+            'Main-Class': 'org.fxmisc.richtext.demo.DemoLauncher')
+    }
+
+    from sourceSets.main.output
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+assemble.dependsOn fatJar
+
+javadoc {
+    // ignore missing Javadoc comments or tags
+    options.addBooleanOption('Xdoclint:all,-missing,-accessibility', true)
+}
+
+task demos(description: "Lists the names and the descriptions of the demos that can be run via a Gradle task") {
+    doLast {
+        // sort the demos first, so they can be added in the build file in any order
+        def list = []
+        tasks.each {
+            if (it.name.endsWith("Demo")) {
+                list.add(it)
+            }
+        }
+        list.sort { first, next -> first.name <=> next.name }
+                .each {
+            println "  ${it.name} - ${it.description}"
+        }
+    }
+}
+
+// To add a task for a demo, use the following template (and, also add the new
+// demo class to org.fxmisc.richtext.demo.DemoLauncher so that it can be launched
+// from the demo fat jar file):
+/*
+task ClassNameDemo(description: "A description of what the demo does") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.ClassNameDemo'
+        }
+    }
+}
+ClassNameDemo.finalizedBy run
+ */
+
+task JavaKeywordsDemo(description: "A CodeArea with Java syntax highlighting that is computed on the JavaFX Application Thread") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.JavaKeywordsDemo'
+        }
+    }
+}
+JavaKeywordsDemo.finalizedBy run
+
+task JavaKeywordsAsyncDemo(description: "A CodeArea with Java syntax highlighting that is computed on a background thread") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.JavaKeywordsAsyncDemo'
+        }
+    }
+}
+JavaKeywordsAsyncDemo.finalizedBy run
+
+task XMLEditorDemo(description: "An area with XML syntax highlighting") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.XMLEditorDemo'
+        }
+    }
+}
+XMLEditorDemo.finalizedBy run
+
+task ManualHighlightingDemo(description: "Manually highlight various parts of the text in an area via buttons") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.ManualHighlightingDemo'
+        }
+    }
+}
+ManualHighlightingDemo.finalizedBy run
+
+task RichTextDemo(description: "An area showing a large number of RichTextFX's features: " +
+                "inlined images, rich text (e.g. text alignment and background colors, etc.), and save/load capabilities") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.richtext.RichTextDemo'
+        }
+    }
+}
+RichTextDemo.finalizedBy run
+
+task PopupDemo(description: "A popup that follows the caret and selection when they move") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.PopupDemo'
+        }
+    }
+}
+PopupDemo.finalizedBy run
+
+task TooltipDemo(description: "Tells you the letter over which the mouse is hovering") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.TooltipDemo'
+        }
+    }
+}
+TooltipDemo.finalizedBy run
+
+task HyperlinkAreaDemo(description: "An area with hyperlinks that open to their corresponding link") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.hyperlink.HyperlinkDemo'
+        }
+    }
+}
+HyperlinkAreaDemo.finalizedBy run
+
+task LineIndicatorDemo(description: "Line numbers appear to left of each paragraph and a triangle appears on the same paragraph as the caret") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.lineindicator.LineIndicatorDemo'
+        }
+    }
+}
+LineIndicatorDemo.finalizedBy run
+
+task CloneDemo( description: "Two areas that can modify and show the same underlying document") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.CloneDemo'
+        }
+    }
+}
+CloneDemo.finalizedBy run
+
+task FontSizeSwitcherDemo(description: "Change the font size of the entire area.") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.FontSizeSwitcherDemo'
+        }
+    }
+}
+FontSizeSwitcherDemo.finalizedBy run
+
+task MultiCaretAndSelectionNameDemo(description: "Add and display multiple carets and selections with different style classes in the same area") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.MultiCaretAndSelectionDemo'
+        }
+    }
+}
+MultiCaretAndSelectionNameDemo.finalizedBy run
+
+task OverrideBehaviorDemo(description: "Overrides the area's default behavior and demonstrates some things of which to be aware") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.OverrideBehaviorDemo'
+        }
+    }
+}
+OverrideBehaviorDemo.finalizedBy run
+
+task ShowLineDemo(description: "Force a specific part of the underlying document to be rendered to the screen.") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.ShowLineDemo'
+        }
+    }
+}
+ShowLineDemo.finalizedBy run
+
+task SpellCheckingDemo(description: "Shows how to add a red squiggle underneath misspelled words") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.SpellCheckingDemo'
+        }
+    }
+}
+SpellCheckingDemo.finalizedBy run
+
+task BracketHighlighterDemo(description: "Shows how to highlight matching brackets") {
+    doLast() {
+        application {
+            mainClass = 'org.fxmisc.richtext.demo.brackethighlighter.BracketHighlighterDemo'
+        }
+    }
+}
+BracketHighlighterDemo.finalizedBy run

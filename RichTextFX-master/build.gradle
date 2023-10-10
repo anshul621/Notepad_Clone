@@ -1,0 +1,22 @@
+subprojects {
+    apply plugin: 'eclipse'
+
+    version = '1.0.0-SNAPSHOT'
+    ext.specificationVersion = '0.11.0'
+
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+    }
+
+    if (it.name.equals("richtextfx")) {
+        task("getProjectVersion") {
+            doLast {
+                println version
+            }
+        }
+    }
+
+}
